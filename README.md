@@ -17,5 +17,5 @@ Any adaptation of this work must include references to the previous authors.
 
   - Andrew Hammond
   - [Krysztof Pintscher](http://www.instructables.com/id/Ford-CD-Emulator-Arduino-Mega/)
-  - [Dale Thomas]((http://www.instructables.com/id/Ford-Bluetooth-Interface-Control-phone-with-stock-/)
+  - [Dale Thomas](http://www.instructables.com/id/Ford-Bluetooth-Interface-Control-phone-with-stock-/)
   - Anson Liu
