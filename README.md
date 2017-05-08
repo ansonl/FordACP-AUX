@@ -1,8 +1,9 @@
-# Ford ACP CD changer emulator using Arduino UNO
+# Ford CD changer emulator using Arduino UNO
 
 Add AUX audio input to your older Ford vehicle using an Arduino UNO. 
 
   - Adapted from Dale Thomas's [*Ford Bluetooth Interface*](http://www.instructables.com/id/Ford-Bluetooth-Interface-Control-phone-with-stock-/)
+  - Uses Ford Audio Corporate Protocol (ACP).
   - Modified for use with Arduino Uno with **switchPin** set to pin 8.
   - Protoshield wiring diagram included. 
 
