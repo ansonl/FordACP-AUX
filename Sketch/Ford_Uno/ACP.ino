@@ -181,7 +181,27 @@ void acp_process(void)
         Timer1.attachInterrupt(PlayTime);        
         break;
            
+      case 0x42:     // [<- Tune]
+      /*
+           switch(callStatus){
+           case false:
+           callStatus = true;
+           at_process(8);       // Answer Call
+           break;
+           case true:
+           callStatus = false;
+           at_process(10);      // End Call
+           break;
+          }
+          */
+           acp_chksum_send(5);
+           
+           break;
+
       case 0xC2:
+      //radio number buttons?
+        acp_chksum_send(5);
+        break;
       case 0xD0:
         if (acp_rx[1] == 0x9a) // Command to change disc
         {
@@ -202,6 +222,57 @@ void acp_process(void)
       case 0xC1:    // Command
         acp_mode = acp_rx[4];
         
+        switch(acp_mode){
+          case 0x00: // Switch from CD ie. FM, AM, Tape or power button. 
+                     // there is no opposite to this. turning power back on only sends "play"
+               //disconnect audio source
+          break;
+          case 0x40: // Switch to CD ie. Audio On (vehichle is turned on) or CD button
+               // Connect Audio Source
+          break;
+          case 0x41: // Scan Button
+           // Mute/Unmute Mic
+               lastCommand = playPause;
+               break;
+          break;
+          case 0x42: // FF Button
+               switch(ffState){
+               case false:
+               ffState = true;
+                // Start Fast Forward
+                lastCommand = fastForwardTrack;
+               break;
+               case true:
+               ffState = false;
+                // Stop Fast Forward / Rewind
+                lastCommand = cancelCommand;
+               break;
+               }
+          break;
+          case 0x44: // Rew Button
+               switch(rewindState){
+               case false:
+               rewindState = true;
+                // Start Rewind
+                lastCommand = rewindTrack;
+               break;
+               case true:
+               rewindState = false;
+                // Stop Fast Forward / Rewind
+                lastCommand = cancelCommand;
+               break;
+               }
+          break;
+          case 0x50: // Shuffle Button
+              //lastCommand = activateSiri;
+               break;
+          case 0x60: // Comp Button
+           // Play/Pause Music
+            //lastCommand = playPause;
+               break;
+          break;
+        }
+
         acp_mode = (acp_mode & 0x40); 
         acp_tx[4] = acp_mode;
         acp_chksum_send(5);
@@ -211,12 +282,16 @@ void acp_process(void)
         change_track(true); // Next Track
         acp_tx[4] = BCD(currentTrack);
         acp_chksum_send(5);
+
+        lastCommand = nextTrack;
         break;
         
       case 0x43:
         change_track(false);  // Prev Track
         acp_tx[4] = BCD(currentTrack);
         acp_chksum_send(5);
+
+        lastCommand = prevTrack;
         break;
         
       default: acp_reset(); // unknown - ignore  

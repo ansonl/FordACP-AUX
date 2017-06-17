@@ -45,6 +45,17 @@ typedef unsigned char u08;
 typedef unsigned short u16;
 typedef unsigned long  u32;
 
+enum InlineControlCommand {
+  noCommand,
+  cancelCommand,
+  playPause,
+  nextTrack,
+  prevTrack,
+  fastForwardTrack,
+  rewindTrack,
+  activateSiri
+};
+
 #ifndef cbi // "clear bit"
  #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #endif
@@ -63,6 +74,7 @@ typedef unsigned long  u32;
 #define ACP_SENDING 4
 
 const int switchPin = 8; // Pin 8 connected to pins 2 & 3 (RE/DE) on MAX485
+const int inlineControlPin = 6; // Pin 6 connected to transistor for inline control
 
 uint8_t acp_rx[12];
 uint8_t acp_tx[12];
@@ -75,11 +87,17 @@ u08 acp_checksum;
 u08 acp_retries;
 u08 acp_mode;
 uint16_t acp_ltimeout;
+boolean rewindState = false;
+boolean ffState = false;
 boolean wPlayTime = false;
 int currentTrack = 1;
 boolean reset_timer = false;
 
+InlineControlCommand lastCommand;
+
 void setup(){
+  
+
   outp(0xff, PORTD);
   outp(0xC0, DDRD);
   pinMode(switchPin, OUTPUT);
@@ -87,10 +105,70 @@ void setup(){
   delay(500);
   acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
   delay(1);
+
+  //Setup inline control pin
+  pinMode(inlineControlPin, OUTPUT);
+  digitalWrite(inlineControlPin, LOW);
 }
 
 void loop()
 {
-  acp_handler();  
+  acp_handler();
+  if (lastCommand != noCommand) {
+    digitalWrite(inlineControlPin, LOW);
+    switch(lastCommand) {
+      case playPause:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        break;
+      case nextTrack:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        break;
+      case prevTrack:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        break;
+      case fastForwardTrack:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        break;
+      case rewindTrack:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        delay(100);
+        digitalWrite(inlineControlPin, LOW);
+        delay(100);
+        digitalWrite(inlineControlPin, HIGH);
+        break;
+      case activateSiri:
+        digitalWrite(inlineControlPin, HIGH);
+        delay(2000);
+        digitalWrite(inlineControlPin, LOW);
+        break;
+    }
+    lastCommand = noCommand;
+  }
 }
 
