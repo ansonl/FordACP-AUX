@@ -40,20 +40,32 @@
  *
  */
 
+//SD data logging
+#include <SPI.h>
+#include <SD.h>
+//#include "libraries/SD/src/SD.h" //Modified SD library with all Serial functions removed. SerialPrint_P() in utility/SdFatUtil.h becomes empty.
+const int chipSelect = 10;
 
+//Accelerometer MMA8451 data logging
+#include <Wire.h>
+#include <Adafruit_MMA8451.h>
+#include <Adafruit_Sensor.h>
+Adafruit_MMA8451 mma = Adafruit_MMA8451();
+
+/*
 //BLE Control
 #include <Shifty.h>
 #include <AltSoftSerial.h>
 #define securityCategory 2
 #define lockCommand 1
 #define unlockCommand 2
-#define alarmCommand 3
 AltSoftSerial bleSerial(2,3);
 Shifty shift;
+const uint8_t shiftRegisterEnablePin = 17;
 const uint8_t lockPin = 0;
 const uint8_t unlockPin = 1;
 const uint8_t alarmPin = 2;
-const uint8_t shiftRegisterEnablePin = 17;
+*/
 
 /*
 //ANCS lib
@@ -112,99 +124,13 @@ byte disconnected_char[8] = {
 };
 */
 
+/*
 // hd44780 with hd44780_I2Cexp i/o class
-#include <Wire.h>
+//#include <Wire.h>
 #include <hd44780.h> // include hd44780 library header file
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i/o expander/backpack class
 hd44780_I2Cexp lcd; // auto detect backpack and pin mappings
-
-byte one_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111
-};
-
-byte two_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111
-};
-
-byte three_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte four_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte five_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte six_row[] = {
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte seven_row[] = {
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte zero_row[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B01010
-};
+*/
 
 //Ford ACP
 #include <util/delay.h>
@@ -263,6 +189,7 @@ boolean reset_timer = false;
 
 InlineControlCommand lastCommand;
 
+/*
 void checkBLECharacteristic() {
   char command[6];
   int i = 0;
@@ -275,15 +202,11 @@ void checkBLECharacteristic() {
     int first = atoi(command);
     int second = atoi(&command[2]);
     int third = atoi(&command[4]);
-    
-    bleSerial.print(first);
-    bleSerial.print(second);
-    bleSerial.println(third);
-    
+
     switch (first) {
       case securityCategory:
         switch (second) {
-          case lockCommand: //21
+          case lockCommand:
             digitalWrite(shiftRegisterEnablePin, HIGH);
             shift.writeBit(lockPin, HIGH);
             delay(500);
@@ -297,7 +220,7 @@ void checkBLECharacteristic() {
             }
             break;
 
-          case unlockCommand: //22
+          case unlockCommand:
             digitalWrite(shiftRegisterEnablePin, HIGH);
             shift.writeBit(unlockPin, HIGH);
             delay(500);
@@ -311,24 +234,18 @@ void checkBLECharacteristic() {
             }
             break;
 
-            case alarmCommand: //23
-            digitalWrite(shiftRegisterEnablePin, HIGH);
-            shift.writeBit(alarmPin, HIGH);
-            delay(500);
-            shift.writeBit(alarmPin, LOW);
-            delay(1000);
-            break;
-
-          default:
+           default:
             break;
         }
-        break;
-      default:
-        break;
     }
+    bleSerial.print(first);
+    bleSerial.print(second);
+    bleSerial.println(third);
   }
+
   digitalWrite(shiftRegisterEnablePin, LOW);
 }
+*/
 
 /*
 void eepromWrite(int address, uint8_t value)
@@ -490,7 +407,6 @@ void setup(){
   //After it is wiped, comment and reupload.
   //eepromWrite(0, 0xFF);
 
-
   outp(0xff, PORTD);
   outp(0xC0, DDRD);
   pinMode(switchPin, OUTPUT);
@@ -503,25 +419,12 @@ void setup(){
   digitalWrite(inlineControlPin, LOW);
   pinMode(inlineControlPin, OUTPUT);
 
-
-  uint8_t i = 0;
-
-  
+  /*
   //Setup LCD
   lcd.begin(16,4);
-  
-  lcd.createChar(1, one_row);
-  lcd.createChar(2, two_row);
-  lcd.createChar(3, three_row);
-  lcd.createChar(4, four_row);
-  lcd.createChar(5, five_row);
-  lcd.createChar(6, six_row);
-  lcd.createChar(7, seven_row);
-  lcd.createChar(8, zero_row);
-
   lcd.clear();
-  lcd.cursor();
-  
+  //lcd.cursor();
+  */
   
   /*
   //Setup ANCS lib
@@ -535,7 +438,7 @@ void setup(){
   notif.set_reset_callback_handle(ancs_reset);
   */
 
-  
+  /*
   //Setup HM-10 BLE serial
   bleSerial.begin(9600);
 
@@ -545,11 +448,13 @@ void setup(){
   shift.setBitCount(8);
   shift.setPins(16, 14, 15); //data,clock,latch
   shift.batchWriteBegin();
+  uint8_t i = 0;
   for (i = 0; i < 8; i++)
     shift.writeBit(i, LOW);
   shift.batchWriteEnd();
-  
-  
+  */
+
+  /*
   //LCD Debug
   //Debug for reading acp array
   char buffer[3];
@@ -569,28 +474,6 @@ void setup(){
   acp_rx[10] = 0xbb;
   acp_rx[11] = 0xcc;
 
-/*
-  lcd.clear();
-  i = 11;
-  long original = acp_rx[i];
-  writeGraphForIndexForValue(i-4, original);
-  lcd.home();
-  lcd.print(original);
-  lcd.print(" ");
-  long scaled = map(original, 0, 255, 0, 32);
-  lcd.print(scaled);
-  */
-
-
-  lcd.clear();
-  i = 4;
-  for (i = 4; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-    long original = acp_rx[i];
-    writeGraphForIndexForValue(i-4, original);
-  }
-  
-
-/*
   for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
     char buffer[3];
     int16_t expanded = (int16_t)acp_rx[i];
@@ -606,28 +489,29 @@ void setup(){
     lcd.setCursor(i*2, 0);
     lcd.write(buffer);
   }
-
-  */
-  
-  /*
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.write(255);
-  lcd.setCursor(0, 1);
-  lcd.write(255);
-
-  
-
-  lcd.write(1);
-  lcd.write(2);
-  lcd.write(3);
-  lcd.write(4);
-  lcd.write(5);
-  lcd.write(6);
-  lcd.write(7);
-  lcd.write(8);
   */
 
+  //SD data logging
+  //lcd.clear();
+  //lcd.write("Initializing SD card...");
+  // see if the card is present and can be initialized:
+  if (!SD.begin(10, 11, 12, 13)) {
+    //lcd.write("Card failed, or not present");
+
+    return;
+  }
+  File dataFile = SD.open("acp_log.txt", FILE_WRITE);
+    dataFile.print("works");
+    dataFile.close();
+  //lcd.clear();
+  //lcd.write("card initialized.");
+
+  //Accelerometer
+  if (! mma.begin()) {
+    //lcd.write("Couldnt start Accelerometer");
+    return;
+  }
+  mma.setRange(MMA8451_RANGE_2_G);
 }
 
 void loop()
@@ -700,7 +584,4 @@ void loop()
   }
   notif.ReadNotifications();
   */
-
-  checkBLECharacteristic();
-  delay(100);
 }

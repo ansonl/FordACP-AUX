@@ -28,43 +28,6 @@ void acp_uart_init(unsigned short baud) {
   sei();
 }
 
-void writeAtLocationAndToRight(uint8_t col, uint8_t row, uint8_t character) {
-  if (character == 0)
-    character = 8; //print "zero row" custom char
-
-  lcd.setCursor(col, row);
-  lcd.write(character);
-  lcd.setCursor(col+1, row);
-  lcd.write(character);
-}
-
-void writeGraphForIndexForValue(uint8_t index, long value) {
-  long scaled = map(value, 0, 255, 0, 32);
-
-  if (scaled == 32) {
-    writeAtLocationAndToRight(index*2, 0, 255);
-    writeAtLocationAndToRight(index*2, 1, 255);
-    writeAtLocationAndToRight(index*2, 2, 255);
-    writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=24) {
-    writeAtLocationAndToRight(index*2, 0, scaled-24);
-    writeAtLocationAndToRight(index*2, 1, 255);
-    writeAtLocationAndToRight(index*2, 2, 255);
-    writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=16) {
-    writeAtLocationAndToRight(index*2, 1, scaled-16);
-    writeAtLocationAndToRight(index*2, 2, 255);
-    writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=8) {
-    writeAtLocationAndToRight(index*2, 2, scaled-8);
-    writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=0) {
-    writeAtLocationAndToRight(index*2, 3, scaled);
-  } else {
-    lcd.print(scaled);
-  }
-}
-
 SIGNAL(USART_RX_vect) {
   u08 eod = (inp(UCSR0B) & _BV(RXB80));
   uint8_t ch = inp(UDR0);
@@ -75,15 +38,6 @@ SIGNAL(USART_RX_vect) {
   if (acp_rxindex > 12) acp_reset();
   else if (eod) {
 
-    if (acp_rx[0] == 0x71) {
-      lcd.clear();
-      uint8_t i = 4; //start at index 4
-      for (i = 4; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-        long original = acp_rx[i];
-        writeGraphForIndexForValue(i-4, original);
-      }
-    }
-    /*
     File dataFile = SD.open("acp_log.txt", FILE_WRITE);
       if (dataFile) {
         //lcd.home();
@@ -120,7 +74,6 @@ SIGNAL(USART_RX_vect) {
         //lcd.home();
         //lcd.write("error opening acp_log.txt");
       }
-    */
     
     if (acp_checksum == ch) // Valid ACP message - send ack
     {
@@ -134,8 +87,8 @@ SIGNAL(USART_RX_vect) {
 }
 
 void acp_txenable(boolean enable) {
-  if (enable) PORTD |= (1 << PD7); //sets a high state on pin PD7
-  else PORTD &= ~(1 << PD7); //sets the low state on pin PD7
+  if (enable) PORTH |= (1 << PH4); //sets a high state on pin PD7
+  else PORTH &= ~(1 << PH4); //sets the low state on pin PD7
   asm volatile("nop");
 }
 
