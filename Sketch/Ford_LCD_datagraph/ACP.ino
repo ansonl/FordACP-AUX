@@ -30,7 +30,10 @@ void acp_uart_init(unsigned short baud) {
 
 void writeAtLocationAndToRight(uint8_t col, uint8_t row, uint8_t character) {
   if (character == 0)
-    character = 0; //print "zero row" custom char
+    character = 0; //print "zero row dots" custom char to just show existance of a graph at zero
+
+  if (character == 8)
+    character = 255; //printt full block character
 
   lcd.setCursor(col, row);
   lcd.write(character);
@@ -46,19 +49,31 @@ void writeGraphForIndexForValue(uint8_t index, long value) {
     writeAtLocationAndToRight(index*2, 1, 255);
     writeAtLocationAndToRight(index*2, 2, 255);
     writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=24) {
+  } else if (scaled > 24) {
     writeAtLocationAndToRight(index*2, 0, scaled-24);
     writeAtLocationAndToRight(index*2, 1, 255);
     writeAtLocationAndToRight(index*2, 2, 255);
     writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=16) {
+  } else if (scaled > 16) {
+    if (acp_rx_old[index] > 24) {
+      writeAtLocationAndToRight(index*2, 0, 0x20);
+    }
     writeAtLocationAndToRight(index*2, 1, scaled-16);
     writeAtLocationAndToRight(index*2, 2, 255);
     writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=8) {
+  } else if (scaled > 8) {
+    if (acp_rx_old[index] > 16) {
+      writeAtLocationAndToRight(index*2, 0, 0x20);
+      writeAtLocationAndToRight(index*2, 1, 0x20);
+    }
     writeAtLocationAndToRight(index*2, 2, scaled-8);
     writeAtLocationAndToRight(index*2, 3, 255);
-  } else if (scaled >=0) {
+  } else if (scaled >= 0) {
+    if (acp_rx_old[index] > 8) {
+      writeAtLocationAndToRight(index*2, 0, 0x20);
+      writeAtLocationAndToRight(index*2, 1, 0x20);
+      writeAtLocationAndToRight(index*2, 2, 0x20);
+    }
     writeAtLocationAndToRight(index*2, 3, scaled);
   } else {
     lcd.print(scaled);
@@ -75,15 +90,18 @@ SIGNAL(USART_RX_vect) {
   if (acp_rxindex > 12) acp_reset();
   else if (eod) {
 
-    lcd.clear();
-    lcd.print(acp_rx[0]);
+    //Print priority of message
+    //lcd.print(acp_rx[0]);
 
     if (acp_rx[0] == 0x71) {
+      //lcd.clear(); //determining what blocks to rewrite so no need to clear entire screen
       uint8_t i = 4; //start at index 4
       for (i = 4; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
         long original = acp_rx[i];
         writeGraphForIndexForValue(i-4, original);
       }
+      //Copy acp data to second array for comparison next time
+      memcpy(acp_rx_old, acp_rx, (sizeof(uint8_t))*(sizeof(acp_rx_old)));
     }
     
     if (acp_checksum == ch) // Valid ACP message - send ack

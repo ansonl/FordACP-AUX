@@ -1,1 +1,0 @@
-Please only open "Ford_Bluetooth.ino". Otherwise, the Arduino IDE will try to place the other .ino files in there own folder. You can see the other files from within the Ford_Bluetooth project.

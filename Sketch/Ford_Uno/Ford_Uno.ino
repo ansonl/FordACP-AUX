@@ -41,6 +41,7 @@
  */
 
 
+/*
 //BLE Control
 #include <Shifty.h>
 #include <AltSoftSerial.h>
@@ -53,6 +54,7 @@ Shifty shift;
 const uint8_t lockPin = 0;
 const uint8_t unlockPin = 1;
 const uint8_t alarmPin = 2;
+*/
 const uint8_t shiftRegisterEnablePin = 17;
 
 /*
@@ -112,13 +114,27 @@ byte disconnected_char[8] = {
 };
 */
 
+/*
 // hd44780 with hd44780_I2Cexp i/o class
 #include <Wire.h>
 #include <hd44780.h> // include hd44780 library header file
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i/o expander/backpack class
 hd44780_I2Cexp lcd; // auto detect backpack and pin mappings
+*/
 
-byte one_row[] = {
+#include <LCD.h>
+#include <LiquidCrystal_SR.h>
+// constructor prototype parameter:
+//  LiquidCrystal_SR lcd(DataPin, ClockPin, EnablePin);
+LiquidCrystal_SR lcd(A5, A3, A4); 
+
+/*
+//LCD595
+#include <LiquidCrystal595.h>    // include the library
+LiquidCrystal595 lcd(4,5,A4);     // datapin, latchpin, clockpin
+*/
+
+byte one_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -129,7 +145,7 @@ byte one_row[] = {
     B11111
 };
 
-byte two_row[] = {
+byte two_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -140,7 +156,7 @@ byte two_row[] = {
     B11111
 };
 
-byte three_row[] = {
+byte three_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -151,7 +167,7 @@ byte three_row[] = {
     B11111
 };
 
-byte four_row[] = {
+byte four_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -162,7 +178,7 @@ byte four_row[] = {
     B11111
 };
 
-byte five_row[] = {
+byte five_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -173,7 +189,7 @@ byte five_row[] = {
     B11111
 };
 
-byte six_row[] = {
+byte six_row[8] = {
     B00000,
     B00000,
     B11111,
@@ -184,7 +200,7 @@ byte six_row[] = {
     B11111
 };
 
-byte seven_row[] = {
+byte seven_row[8] = {
     B00000,
     B11111,
     B11111,
@@ -195,7 +211,7 @@ byte seven_row[] = {
     B11111
 };
 
-byte zero_row[] = {
+byte zero_row[8] = {
     B00000,
     B00000,
     B00000,
@@ -263,6 +279,7 @@ boolean reset_timer = false;
 
 InlineControlCommand lastCommand;
 
+/*
 void checkBLECharacteristic() {
   char command[6];
   int i = 0;
@@ -329,6 +346,7 @@ void checkBLECharacteristic() {
   }
   digitalWrite(shiftRegisterEnablePin, LOW);
 }
+*/
 
 /*
 void eepromWrite(int address, uint8_t value)
@@ -491,24 +509,36 @@ void setup(){
   //eepromWrite(0, 0xFF);
 
 
+
+  
+
+  
   outp(0xff, PORTD);
   outp(0xC0, DDRD);
+  
+  
   pinMode(switchPin, OUTPUT);
   digitalWrite(switchPin, LOW);
   delay(500);
   acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
   delay(1);
+  
 
+  
   //Setup inline control pin
   digitalWrite(inlineControlPin, LOW);
   pinMode(inlineControlPin, OUTPUT);
-
+  
+  
 
   uint8_t i = 0;
 
-  
-  //Setup LCD
-  lcd.begin(16,4);
+  lcd.begin(16,4);             // 16 characters, 2 rows
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Wow. 3 hello");
+  lcd.setCursor(1,1);
+  lcd.print("Fabulous");
   
   lcd.createChar(1, one_row);
   lcd.createChar(2, two_row);
@@ -517,11 +547,10 @@ void setup(){
   lcd.createChar(5, five_row);
   lcd.createChar(6, six_row);
   lcd.createChar(7, seven_row);
-  lcd.createChar(8, zero_row);
-
-  lcd.clear();
-  lcd.cursor();
+  lcd.createChar(0, zero_row);
   
+  
+
   
   /*
   //Setup ANCS lib
@@ -535,7 +564,7 @@ void setup(){
   notif.set_reset_callback_handle(ancs_reset);
   */
 
-  
+  /*
   //Setup HM-10 BLE serial
   bleSerial.begin(9600);
 
@@ -548,6 +577,9 @@ void setup(){
   for (i = 0; i < 8; i++)
     shift.writeBit(i, LOW);
   shift.batchWriteEnd();
+  */
+  //digitalWrite(shiftRegisterEnablePin, LOW);
+  //pinMode(shiftRegisterEnablePin, OUTPUT);
   
   
   //LCD Debug
@@ -568,8 +600,9 @@ void setup(){
   acp_rx[9] = 0xaa;
   acp_rx[10] = 0xbb;
   acp_rx[11] = 0xcc;
-
-/*
+  
+  /*
+  //test bar graph on single index i
   lcd.clear();
   i = 11;
   long original = acp_rx[i];
@@ -581,7 +614,8 @@ void setup(){
   lcd.print(scaled);
   */
 
-
+  
+  //test bar graph on indices 4-11
   lcd.clear();
   i = 4;
   for (i = 4; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
@@ -589,8 +623,11 @@ void setup(){
     writeGraphForIndexForValue(i-4, original);
   }
   
+  memset(acp_rx, 0, (sizeof(uint8_t))*(sizeof(acp_rx)));
+  
 
 /*
+  //print test acp array
   for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
     char buffer[3];
     int16_t expanded = (int16_t)acp_rx[i];
@@ -610,14 +647,12 @@ void setup(){
   */
   
   /*
+  //test custom characters
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.write(255);
   lcd.setCursor(0, 1);
   lcd.write(255);
-
-  
-
   lcd.write(1);
   lcd.write(2);
   lcd.write(3);
@@ -632,11 +667,10 @@ void setup(){
 
 void loop()
 {
+  
   acp_handler();
-
-  /*
-   * The shortest duration of digitalWrite that is sensed by iPhone SE is ~60ms.
-   */
+  
+  //The shortest duration of digitalWrite that is sensed by iPhone SE is ~60ms.
   if (lastCommand != noCommand) {
     digitalWrite(inlineControlPin, LOW);
     switch(lastCommand) {
@@ -693,6 +727,7 @@ void loop()
     }
     lastCommand = noCommand;
   }
+  
 
   /*
   if((millis() - screen_update_timer) > screen_timer_interval) {
@@ -701,6 +736,6 @@ void loop()
   notif.ReadNotifications();
   */
 
-  checkBLECharacteristic();
-  delay(100);
+  //checkBLECharacteristic();
+  //delay(100);
 }

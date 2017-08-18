@@ -12,10 +12,10 @@
  * Revisions:
  *
  * 2013-12-17 version 0.9 - public relase
+ * 2017-05-07 version 1.1 - Removed Bluetooth functionality. - Anson Liu (ansonliu.com)
  *
  */
 void PlayTime(){
-  wakeOVC();
   wPlayTime++;
   acp_displaytime();
 }
@@ -59,12 +59,10 @@ void change_track(boolean next)
     } 
     else {
      currentTrack--;
-     at_process(5); 
     }
   }
   else {
     currentTrack++;
-    at_process(4);
   }
   reset_timer = true;
 }
