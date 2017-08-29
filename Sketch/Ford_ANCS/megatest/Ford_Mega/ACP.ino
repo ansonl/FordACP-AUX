@@ -37,6 +37,44 @@ SIGNAL(USART_RX_vect) {
   acp_rx[acp_rxindex++] = ch;
   if (acp_rxindex > 12) acp_reset();
   else if (eod) {
+
+    File dataFile = SD.open("acp_log.txt", FILE_WRITE);
+      if (dataFile) {
+        //lcd.home();
+        int i = 0;
+        for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
+          char buffer[3];
+          int16_t expanded = (int16_t)acp_rx[i];
+          itoa((int16_t)expanded, buffer, 16);
+
+          dataFile.print(buffer);
+          dataFile.print(" ");
+
+          //lcd.setCursor(i*2, 0);
+          //lcd.write(buffer);
+        }
+
+        dataFile.print(" ");
+
+        //Accelerometer logging m/s^2
+        sensors_event_t event; 
+        mma.getEvent(&event);
+        dataFile.print(event.acceleration.x);
+        dataFile.print(" ");
+        dataFile.print(event.acceleration.y);
+        dataFile.print(" ");
+        dataFile.print(event.acceleration.z);
+        dataFile.print("");
+
+        String stringOne =  String(millis(), DEC);
+        dataFile.println(stringOne);
+
+        dataFile.close();
+      } else {
+        //lcd.home();
+        //lcd.write("error opening acp_log.txt");
+      }
+    
     if (acp_checksum == ch) // Valid ACP message - send ack
     {
       acp_status = ACP_SENDACK;
@@ -49,8 +87,8 @@ SIGNAL(USART_RX_vect) {
 }
 
 void acp_txenable(boolean enable) {
-  if (enable) PORTD |= (1 << PD7); //sets a high state on pin PD7
-  else PORTD &= ~(1 << PD7); //sets the low state on pin PD7
+  if (enable) PORTH |= (1 << PH4); //sets a high state on pin PD7
+  else PORTH &= ~(1 << PH4); //sets the low state on pin PD7
   asm volatile("nop");
 }
 

@@ -41,186 +41,39 @@
  */
 
 
-/*
 //BLE Control
 #include <Shifty.h>
 #include <AltSoftSerial.h>
+#include <EEPROM.h>
+
+#define connectionCategory 1
+#define connectionValidatePassCommand 1
+#define connectionSetPassCommand 2
+const uint8_t eepromHeader[] = {
+  1,
+  6,
+  3,
+  8,
+  7,
+  6
+};
+uint8_t passphrase[] = {
+  1,
+  1,
+  1,
+  2
+};
+
 #define securityCategory 2
-#define lockCommand 1
-#define unlockCommand 2
+#define securityLockCommand 1
+#define securityUnlockCommand 2
 #define alarmCommand 3
 AltSoftSerial bleSerial(2,3);
 Shifty shift;
+const uint8_t shiftRegisterEnablePin = 17;
 const uint8_t lockPin = 0;
 const uint8_t unlockPin = 1;
 const uint8_t alarmPin = 2;
-*/
-const uint8_t shiftRegisterEnablePin = 17;
-
-/*
-//ANCS lib
-#define ANCS_USE_APP
-#define ANCS_USE_SUBTITLE
-#include <lib_aci.h>
-#include <SPI.h>
-#include <EEPROM.h>
-
-#include <notif.h>
-
-#define LCD_SIZE 16
-
-Notif notif(5,2);
-ancs_notification_t* current_notif = NULL;
-uint8_t title_char = 0;
-uint8_t subtitle_char = 0;
-uint8_t title_scroll_wait = 0;
-uint8_t subtitle_scroll_wait = 0;
-uint8_t start_scroll_wait = 5;
-uint8_t end_scroll_wait = 5;
-char wait = ' ';
-unsigned long screen_update_timer = 0;
-const uint8_t screen_timer_interval = 500;
-boolean connected = false;
-
-//custom chars for connectivity status
-byte antenna_char[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00100,
-    B00100,
-    B00100,
-    B01110,
-};
-
-byte connected_char[8] = {
-    B00000,
-    B01110,
-    B10001,
-    B00100,
-    B00100,
-    B00100,
-    B01110,
-};
-
-byte disconnected_char[8] = {
-    B00000,
-    B01010,
-    B00100,
-    B01010,
-    B00100,
-    B00100,
-    B01110,
-};
-*/
-
-/*
-// hd44780 with hd44780_I2Cexp i/o class
-#include <Wire.h>
-#include <hd44780.h> // include hd44780 library header file
-#include <hd44780ioClass/hd44780_I2Cexp.h> // i/o expander/backpack class
-hd44780_I2Cexp lcd; // auto detect backpack and pin mappings
-*/
-
-#include <LCD.h>
-#include <LiquidCrystal_SR.h>
-// constructor prototype parameter:
-//  LiquidCrystal_SR lcd(DataPin, ClockPin, EnablePin);
-LiquidCrystal_SR lcd(A5, A3, A4); 
-
-/*
-//LCD595
-#include <LiquidCrystal595.h>    // include the library
-LiquidCrystal595 lcd(4,5,A4);     // datapin, latchpin, clockpin
-*/
-
-byte one_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111
-};
-
-byte two_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111
-};
-
-byte three_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte four_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte five_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte six_row[8] = {
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte seven_row[8] = {
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B11111
-};
-
-byte zero_row[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B01010
-};
 
 //Ford ACP
 #include <util/delay.h>
@@ -280,9 +133,80 @@ boolean reset_timer = false;
 InlineControlCommand lastCommand;
 
 /*
+ * Write passphrase to EEPROM. Writes one byte after the EEPROM Header. Separated from EEPROM Header by one byte of value 0x0. Ends with a byte of value 0x0.
+ */
+void writePassToEEPROM() {
+  for (uint8_t i = sizeof(eepromHeader)+1; i < sizeof(eepromHeader)+sizeof(passphrase)+1; i++)
+    EEPROM.write(i, passphrase[i-sizeof(eepromHeader)]);
+  EEPROM.write(sizeof(eepromHeader)+sizeof(passphrase)+1, 0x00);
+}
+
+/*
+ * Write EEPROM Header at beginning of EEPROM. Write 0x00 byte after header.
+ */
+void writeHeaderToEEPROM() {
+  for (uint8_t i = 0; i < sizeof(eepromHeader); i++)
+    EEPROM.write(i, eepromHeader[i]);
+  EEPROM.write(sizeof(eepromHeader), 0x00);
+}
+
+/*
+ * Read passphrase from EEPROM
+ */
+bool readPassFromEEPROM() {
+  uint8_t passLength = 0;
+  while (EEPROM.read(sizeof(eepromHeader)+1+passLength) != 0x00) {
+    passLength++;
+  }
+
+  passphrase[passLength];
+  for (uint8_t i = 0; i < passLength; i++) {
+    passphrase[i] = EEPROM.read(sizeof(eepromHeader)+1+i);
+  }
+}
+
+/*
+ * Reset all EEPROM to 0xff (255). 0xff (255) is the default eeprom value.
+ */
+void resetEEPROM() {
+  for (int i = 0; i < EEPROM.length(); i++) {
+    EEPROM.write(i, 0xff); 
+  }
+}
+
+/*
+ * Check for valid EEPROM Header at beginning of EEPROM.
+ */
+bool checkValidEEPROMHeader() {
+  for (uint8_t i = 0; i < sizeof(eepromHeader); i++) {
+    if (EEPROM.read(i) != eepromHeader[i])
+      return false;
+  }
+  return true;
+}
+
+bool checkValidPass(char* pass) {
+  readPassFromEEPROM();
+
+  bool match = true;
+  for (uint8_t j = 0; j < sizeof(passphrase); j++) {
+    if (passphrase[j] != atoi(&pass[j*2])) {
+      match = false;
+      break;
+    }
+  }
+
+  return match;
+}
+
+/*
+ * Check BLE Characteristic for HM-10 BLE Module and process any commands. 
+ */
 void checkBLECharacteristic() {
-  char command[6];
-  int i = 0;
+  char command[100];
+  memset(command, 0, sizeof(command));
+
+  uint8_t i = 0;
   while (bleSerial.available()) {
     command[i] = bleSerial.read();
     command[i+1] = '\0';
@@ -293,14 +217,48 @@ void checkBLECharacteristic() {
     int second = atoi(&command[2]);
     int third = atoi(&command[4]);
     
+    /*
     bleSerial.print(first);
     bleSerial.print(second);
     bleSerial.println(third);
+    */
     
     switch (first) {
+      case connectionCategory:
+        switch (second) {
+          case connectionValidatePassCommand: //11XXXX
+            if (checkValidPass(&command[4]))
+              bleSerial.print(0);
+            else
+              bleSerial.print(1);
+
+            break;
+          case connectionSetPassCommand: //12XXXXYYYY
+            if (checkValidPass(&command[4])) {
+              uint8_t newPassLength = 0;
+              while (command[4+sizeof(passphrase)*2+newPassLength*2] != 0) {
+                newPassLength++;
+              }
+
+              uint8_t oldPassLength = sizeof(passphrase);
+
+              passphrase[newPassLength];
+              for (uint8_t j = 0; j < newPassLength; j++) {
+                passphrase[j] = atoi(&command[4+sizeof(oldPassLength)*2+j*2]);
+              }
+
+              bleSerial.print(0);
+            }
+            else
+              bleSerial.print(1);
+
+
+            break;
+        }
+      break;
       case securityCategory:
         switch (second) {
-          case lockCommand: //21
+          case securityLockCommand: //21
             digitalWrite(shiftRegisterEnablePin, HIGH);
             shift.writeBit(lockPin, HIGH);
             delay(500);
@@ -314,7 +272,7 @@ void checkBLECharacteristic() {
             }
             break;
 
-          case unlockCommand: //22
+          case securityUnlockCommand: //22
             digitalWrite(shiftRegisterEnablePin, HIGH);
             shift.writeBit(unlockPin, HIGH);
             delay(500);
@@ -346,225 +304,34 @@ void checkBLECharacteristic() {
   }
   digitalWrite(shiftRegisterEnablePin, LOW);
 }
-*/
 
 /*
-void eepromWrite(int address, uint8_t value)
-{
-  eeprom_write_byte((unsigned char *) address, value);
-}
-
-void update_lcd() {
-  if (current_notif) {
-
-    lcd.home();
-
-    char buffer[3];
-    itoa(current_notif->category, buffer, 10);
-    switch(current_notif->category) {
-      case ANCS_CATEGORY_OTHER:
-        lcd.print("Other");
-        break;
-      case ANCS_CATEGORY_INCOMING_CALL:
-        lcd.print("Incoming Call");
-        break;
-      case ANCS_CATEGORY_MISSED_CALL:
-        lcd.print("Missed Call");
-        break;
-      case ANCS_CATEGORY_VOICEMAIL:
-        lcd.print("Voicemail");
-        break;
-      case ANCS_CATEGORY_SOCIAL:
-        lcd.print("Social");
-        break;
-      case ANCS_CATEGORY_SCHEDULE:
-        lcd.print("Schedule");
-        break;
-      case ANCS_CATEGORY_EMAIL:
-        lcd.print("Email");
-        break;
-      case ANCS_CATEGORY_NEWS:
-        lcd.print("News");
-        break;
-      case ANCS_CATEGORY_HEALTH_FITNESS:
-        lcd.print("Health Fitness");
-        break;
-      case ANCS_CATEGORY_BUSINESS_FINANCE:
-        lcd.print("Business Finance");
-        break;
-      case ANCS_CATEGORY_LOCATION:
-        lcd.print("Location");
-        break;
-      case ANCS_CATEGORY_ENTERTAINMENT:
-        lcd.print("Entertainment");
-        break;
-      default:
-        lcd.print("Unknown ");
-        lcd.print(buffer);
-    }
-    //lcd.print("-A");
-    //lcd.print(current_notif->app);
-
-    lcd.setCursor(0,1);
-    if (strlen(current_notif->title) >= LCD_SIZE) { //Message is too long for LCD_SIZE, scroll it
-      if (strlen(current_notif->title)-title_char > LCD_SIZE) {
-        char title_buffer[LCD_SIZE+1];
-        memset(title_buffer, 0, sizeof(title_buffer));
-        memcpy(title_buffer, &(current_notif->title[title_char]), LCD_SIZE);
-        lcd.print(title_buffer);
-
-        //Pause for start_scroll_wait time before beginning to scroll
-        if (title_scroll_wait < start_scroll_wait) {
-          title_scroll_wait++;
-        } else {
-          title_char++;
-        }
-      } else { //showed enough so that length of remaining message length is = LCD_SIZE
-        lcd.print(&(current_notif->title[title_char]));
-        if (title_scroll_wait == start_scroll_wait+end_scroll_wait) { //wait for (end_scroll_wait - start_scroll_wait) * 1000ms before reseting start char position
-          title_char = 0;
-          title_scroll_wait = 0;
-        } else {
-          title_scroll_wait++;
-        }
-      }
-    } else {
-      lcd.print(&(current_notif->title[title_char]));
-    }
-
-
-    lcd.setCursor(0,2);
-    if (strlen(current_notif->subtitle) >= LCD_SIZE) { //Message is too long for LCD_SIZE, scroll it
-      if (strlen(current_notif->subtitle)-subtitle_char > LCD_SIZE) {
-        char subtitle_buffer[LCD_SIZE+1];
-        memset(subtitle_buffer, 0, sizeof(subtitle_buffer));
-        memcpy(subtitle_buffer, &(current_notif->subtitle[subtitle_char]), LCD_SIZE);
-        lcd.print(subtitle_buffer);
-
-        //Pause for start_scroll_wait time before beginning to scroll
-        if (subtitle_scroll_wait < start_scroll_wait) {
-          subtitle_scroll_wait++;
-        } else {
-          subtitle_char++;
-        }
-      } else { //showed enough so that length of remaining message length is = LCD_SIZE
-        lcd.print(&(current_notif->subtitle[subtitle_char]));
-        if (subtitle_scroll_wait == start_scroll_wait+end_scroll_wait) { //wait for (end_scroll_wait - start_scroll_wait) * 1000ms before reseting start char position
-          subtitle_char = 0;
-          subtitle_scroll_wait = 0;
-        } else {
-          subtitle_scroll_wait++;
-        }
-      }
-    } else {
-      lcd.print(&(current_notif->subtitle[subtitle_char]));
-    } 
-  }
-
-  //Update connectivity status
-  lcd.setCursor(15,0);
-    lcd.print(wait);
-    if (wait == 0)
-    {
-        if (connected){
-            wait = 1;
-        }else {
-            wait = 2;
-        }
-    } else {
-        wait=0;
-    }
-
-  screen_update_timer = millis();
-}
-
-void ancs_notifications(ancs_notification_t* notif) {
-  current_notif = notif;
-  title_char = 0;
-  subtitle_char = 0;
-
-  lcd.clear();
-}
-
-void ancs_connected() {
-    connected = true;
-}
-void ancs_disconnected() {
-    connected = false;
-}
-
-void ancs_reset() {
-    connected = false;
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print(" Bond Cleared ");
-    lcd.setCursor(0,1);
-    lcd.print("Please Reset");
-}
-*/
-
-void setup(){
-  //If things get really crazy, uncomment this line. It wipes the saved EEPROM information for the Nordic chip. Good to do this if the services.h file gets updated.
-  //After it is wiped, comment and reupload.
-  //eepromWrite(0, 0xFF);
-
-
-
-  
-
-  
+ * ACP communication setup
+ */
+void acp_setup() {
   outp(0xff, PORTD);
   outp(0xC0, DDRD);
-  
   
   pinMode(switchPin, OUTPUT);
   digitalWrite(switchPin, LOW);
   delay(500);
   acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
   delay(1);
-  
+}
 
-  
+/*
+ * Playback inline control setup
+ */
+void inline_control_setup() {
   //Setup inline control pin
   digitalWrite(inlineControlPin, LOW);
   pinMode(inlineControlPin, OUTPUT);
-  
-  
+}
 
-  uint8_t i = 0;
-
-  lcd.begin(16,4);             // 16 characters, 2 rows
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Wow. 3 hello");
-  lcd.setCursor(1,1);
-  lcd.print("Fabulous");
-  
-  lcd.createChar(1, one_row);
-  lcd.createChar(2, two_row);
-  lcd.createChar(3, three_row);
-  lcd.createChar(4, four_row);
-  lcd.createChar(5, five_row);
-  lcd.createChar(6, six_row);
-  lcd.createChar(7, seven_row);
-  lcd.createChar(0, zero_row);
-  
-  
-
-  
-  /*
-  //Setup ANCS lib
-  lcd.createChar(0, antenna_char);
-  lcd.createChar(1, connected_char);
-  lcd.createChar(2, disconnected_char);
-  notif.setup();
-  notif.set_notification_callback_handle(ancs_notifications);
-  notif.set_connect_callback_handle(ancs_connected);
-  notif.set_disconnect_callback_handle(ancs_disconnected);
-  notif.set_reset_callback_handle(ancs_reset);
-  */
-
-  /*
+/*
+ * Setup HM-10 BLE Serial
+ */
+void ble_setup() {
   //Setup HM-10 BLE serial
   bleSerial.begin(9600);
 
@@ -574,102 +341,30 @@ void setup(){
   shift.setBitCount(8);
   shift.setPins(16, 14, 15); //data,clock,latch
   shift.batchWriteBegin();
-  for (i = 0; i < 8; i++)
+  //Set all shift register bits to 0
+  for (uint8_t i = 0; i < 8; i++)
     shift.writeBit(i, LOW);
   shift.batchWriteEnd();
-  */
-  //digitalWrite(shiftRegisterEnablePin, LOW);
-  //pinMode(shiftRegisterEnablePin, OUTPUT);
-  
-  
-  //LCD Debug
-  //Debug for reading acp array
-  char buffer[3];
-  itoa(sizeof(acp_rx)/sizeof(uint8_t), buffer, 10);
-  //lcd.write(buffer);
-  
-  acp_rx[0] = 0x11;
-  acp_rx[1] = 0x22;
-  acp_rx[2] = 0x33;
-  acp_rx[3] = 0x44;
-  acp_rx[4] = 0x55;
-  acp_rx[5] = 0x66;
-  acp_rx[6] = 0x77;
-  acp_rx[7] = 0x88;
-  acp_rx[8] = 0x99;
-  acp_rx[9] = 0xaa;
-  acp_rx[10] = 0xbb;
-  acp_rx[11] = 0xcc;
-  
-  /*
-  //test bar graph on single index i
-  lcd.clear();
-  i = 11;
-  long original = acp_rx[i];
-  writeGraphForIndexForValue(i-4, original);
-  lcd.home();
-  lcd.print(original);
-  lcd.print(" ");
-  long scaled = map(original, 0, 255, 0, 32);
-  lcd.print(scaled);
-  */
-
-  
-  //test bar graph on indices 4-11
-  lcd.clear();
-  i = 4;
-  for (i = 4; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-    long original = acp_rx[i];
-    writeGraphForIndexForValue(i-4, original);
-  }
-  
-  memset(acp_rx, 0, (sizeof(uint8_t))*(sizeof(acp_rx)));
-  
-
-/*
-  //print test acp array
-  for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-    char buffer[3];
-    int16_t expanded = (int16_t)acp_rx[i];
-    itoa((int16_t)expanded, buffer, 16);
-    lcd.setCursor(i*2, 0);
-    lcd.write(buffer);
-  }
-  memset(acp_rx, 0, (sizeof(uint8_t))*(sizeof(acp_rx)));
-  for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-    char buffer[3];
-    int16_t expanded = (int16_t)acp_rx[i];
-    itoa((int16_t)expanded, buffer, 16);
-    lcd.setCursor(i*2, 0);
-    lcd.write(buffer);
-  }
-
-  */
-  
-  /*
-  //test custom characters
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.write(255);
-  lcd.setCursor(0, 1);
-  lcd.write(255);
-  lcd.write(1);
-  lcd.write(2);
-  lcd.write(3);
-  lcd.write(4);
-  lcd.write(5);
-  lcd.write(6);
-  lcd.write(7);
-  lcd.write(8);
-  */
-
 }
 
-void loop()
-{
-  
-  acp_handler();
-  
+/*
+ * Setup remote lock/unlock by BLE.
+ */
+void remote_access_setup() {
+
+  //Write default passphrase and header to EEPROM if invalid header
+  if (!checkValidEEPROMHeader()) {
+    writePassToEEPROM();
+    writeHeaderToEEPROM();
+  }
+
+  ble_setup();
+}
+
+/*
+ * Simulate inline control based on value of lastCommand.
+ */
+void inline_control_handler() {
   //The shortest duration of digitalWrite that is sensed by iPhone SE is ~60ms.
   if (lastCommand != noCommand) {
     digitalWrite(inlineControlPin, LOW);
@@ -727,15 +422,25 @@ void loop()
     }
     lastCommand = noCommand;
   }
+}
+
+void setup(){
+  acp_setup();
   
+  inline_control_setup();
 
-  /*
-  if((millis() - screen_update_timer) > screen_timer_interval) {
-    update_lcd();
-  }
-  notif.ReadNotifications();
-  */
+  remote_access_setup();
+}
 
-  //checkBLECharacteristic();
-  //delay(100);
+void loop()
+{
+  //Handle ACP communication
+  acp_handler();
+  
+  //Handle inline control
+  inline_control_handler();
+  
+  //Check for BLE commands
+  checkBLECharacteristic();
+  delay(100);
 }
