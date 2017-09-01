@@ -1,3 +1,6 @@
+#include <AltSoftSerial.h>
+AltSoftSerial bleSerial(2,3);
+
 #include <EEPROM.h>
 
 #define commandControlLength 3
@@ -148,6 +151,7 @@ void checkBLECharacteristic() {
   };
   */
   
+  /*
   //Lock car twice 211XXXXXX
   char test[] {
     0x32,
@@ -160,28 +164,37 @@ void checkBLECharacteristic() {
     0x31,
     0x32
   };
+  */
   
 
-  /*
+  
   //Read in actual command from serial
+  if (bleSerial.available()) {
+    Serial.print("Received command (ASCII): ");
+  }
+
   uint8_t cLength = 0;
   while (bleSerial.available()) {
     command[cLength] = bleSerial.read();
-    cLength++;
-  }
-  */
 
+    Serial.print(command[cLength]);
+
+    cLength++;
+    delay(2); //Wait for a short time ~2ms with HM-10 before checking to see if serial has data available. Checking too fast may result in loss of data (data not available yet).
+  }
+  
+  /*
   //DEBUG copy over test command from test variable
-  Serial.print("Received command (ASCII): ");
   uint8_t cLength = 0;
   for (cLength = 0; cLength < sizeof(test); cLength++) {
     command[cLength] = test[cLength];
 
     Serial.print(command[cLength]);
   }
-  Serial.println();
+  */
 
-
+  if (cLength)
+    Serial.println();
 
   if (cLength) {
     uint8_t commandControl[commandControlLength];
@@ -269,11 +282,12 @@ void remote_access_setup() {
   for (uint8_t i = 0; i < sizeof(passphrase); i++) {
     Serial.print(passphrase[i]);
   }
-
   Serial.println();
-  //ble_setup();
 
-  checkBLECharacteristic();
+  //ble_setup();
+  bleSerial.begin(9600);
+
+  
 }
 
 void setup() {
@@ -282,4 +296,5 @@ void setup() {
 
 void loop()
 {
+  checkBLECharacteristic();
 }
