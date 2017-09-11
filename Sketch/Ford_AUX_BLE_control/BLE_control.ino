@@ -1,7 +1,18 @@
-#include <AltSoftSerial.h>
-AltSoftSerial bleSerial(2,3);
+/* 
+ * BLE Control for Ford ACP AUX interface by Anson Liu
+ *
+ * Control vehicle locks through BLE.
+ * Use 74HC595 latching shift register to control key fob.
+ * Use HM-10 bluetooth module to communicate over BLE.
+ * For best results, set AT+TYPE3 to enable auth+pair+bond.
+ *
+ */
 
 #include <EEPROM.h>
+#include <AltSoftSerial.h>
+#include <Shifty.h>
+AltSoftSerial bleSerial;
+#define cdEnablePin 3
 
 #define commandControlLength 3
 
@@ -31,6 +42,18 @@ char passphrase[] = { //121212
 #define securityUnlockCommand 2
 #define securityAlarmCommand 3
 
+#define lockoutInterval 10000
+bool lockout;
+unsigned long lockoutMillis;
+
+
+//Shift register setup
+Shifty shift;
+const uint8_t shiftRegisterEnablePin = 17;
+const uint8_t lockPin = 0;
+const uint8_t unlockPin = 1;
+const uint8_t alarmPin = 2;
+
 /*
  * Write passphrase to EEPROM. Writes one byte after the EEPROM Header. Separated from EEPROM Header by one byte of value 0x0. Ends with a byte of value 0x0.
  */
@@ -56,13 +79,6 @@ void writeHeaderToEEPROM() {
 void readPassFromEEPROM() {
   for (uint8_t i = 0; i < sizeof(passphrase); i++) {
     passphrase[i] = EEPROM.read(sizeof(eepromHeader)+1+i);
-    
-    /*
-    Serial.print(i);
-    Serial.print("r ");
-    Serial.println(passphrase[i]);
-    */
-
   }
 }
 
@@ -99,102 +115,19 @@ bool checkValidPass(uint8_t* pass) {
  * Check BLE Characteristic for HM-10 BLE Module and process any commands. 
  */
 void checkBLECharacteristic() {
-  char command[100];
+  //Determine if lockout mode for connectionCategory. Return error code 2 if lockout
+  if (lockout && (unsigned long)(millis() - lockoutMillis) >= lockoutInterval)
+    lockout = false;
+
+  char command[50];
   memset(command, 0, sizeof(command));
-
-  /*
-  //Validate pass of 121212
-  char test[] {
-    0x31,
-    0x31,
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32
-  };
-  */
-
-  /*
-  //Change pass from 121212 to 221212
-  char test[] {
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x32, //new pass
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32
-  };
-  */
-
-  /*
-  //Lock car once 210XXXXXX
-  char test[] {
-    0x32,
-    0x31,
-    0x30,
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32
-  };
-  */
-  
-  /*
-  //Lock car twice 211XXXXXX
-  char test[] {
-    0x32,
-    0x31,
-    0x31,
-    0x31,
-    0x32,
-    0x31,
-    0x32,
-    0x31,
-    0x32
-  };
-  */
-  
-
-  
-  //Read in actual command from serial
-  if (bleSerial.available()) {
-    Serial.print("Received command (ASCII): ");
-  }
 
   uint8_t cLength = 0;
   while (bleSerial.available()) {
     command[cLength] = bleSerial.read();
-
-    Serial.print(command[cLength]);
-
     cLength++;
-    delay(2); //Wait for a short time ~2ms with HM-10 before checking to see if serial has data available. Checking too fast may result in loss of data (data not available yet).
+    delay(100); //Wait for a short time ~100ms with HM-10 before checking to see if serial has data available. Checking too fast may result in loss of data (data not available yet).
   }
-  
-  /*
-  //DEBUG copy over test command from test variable
-  uint8_t cLength = 0;
-  for (cLength = 0; cLength < sizeof(test); cLength++) {
-    command[cLength] = test[cLength];
-
-    Serial.print(command[cLength]);
-  }
-  */
-
-  if (cLength)
-    Serial.println();
 
   if (cLength) {
     uint8_t commandControl[commandControlLength];
@@ -202,10 +135,6 @@ void checkBLECharacteristic() {
       char buffer[1];
       buffer[0] = command[i];
       commandControl[i] = atoi(buffer);
-
-      Serial.print(i);
-      Serial.print(" ");
-      Serial.println(commandControl[i]);
     }
 
     //response buffer
@@ -214,48 +143,45 @@ void checkBLECharacteristic() {
     for (uint8_t i = 0; i < 3; i++) {
       response[i] = command[i];
     }
-    
+
+    //return if lockout mode active
+    if (lockout) {
+      response[3] = 0x32;
+      bleSerial.print(response);
+      return;
+    }
+
     switch (commandControl[0]) {
       case connectionCategory:
         switch (commandControl[1]) {
           case connectionValidatePassCommand: //110XXXXXX (ascii)
 
-            if (checkValidPass((uint8_t*)&command[commandControlLength])) {
-              Serial.println(0);
-
-              
+            if (checkValidPass((uint8_t*)&command[commandControlLength])) {              
               response[3] = 0x30;
               bleSerial.print(response);
             }
             else {
-              Serial.println(1);
-
               response[3] = 0x31;
               bleSerial.print(response);
+              lockoutMillis = millis();
+              lockout = true;
             }
 
             break;
           case connectionSetPassCommand: //120XXXXXXYYYYYY
           
             if (checkValidPass((uint8_t*)&command[commandControlLength])) {
-              Serial.print("Setting new passphrase: ");
               for (uint8_t i = 0; i < sizeof(passphrase); i++) {
                 passphrase[i] = command[commandControlLength+sizeof(passphrase)+i];
-
-                Serial.print(passphrase[i]);
               }
               writePassToEEPROM();
-
-              Serial.println();
-              Serial.println(0);
-
               response[3] = 0x30;
               bleSerial.print(response);
             } else {
-              Serial.println(1);
-
               response[3] = 0x31;
               bleSerial.print(response);
+              lockoutMillis = millis();
+              lockout = true;
             }
 
 
@@ -266,94 +192,124 @@ void checkBLECharacteristic() {
         switch (commandControl[1]) {
           case securityLockCommand: //210XXXXXX
             if (checkValidPass((uint8_t*)&command[commandControlLength])) {
-              Serial.println("lock once");
-              Serial.println(0);
-              if (commandControl[2]) { //221XXXXXX
-                Serial.println("lock twice");
-              }
+              
+              digitalWrite(shiftRegisterEnablePin, HIGH);
+              shift.writeBit(lockPin, HIGH);
+              delay(500);
+              shift.writeBit(lockPin, LOW);
+              delay(1000);
 
+              if (commandControl[2]) { //221XXXXXX
+                shift.writeBit(lockPin, HIGH);
+                delay(500);
+                shift.writeBit(lockPin, LOW);
+                delay(1000);
+              }
               response[3] = 0x30;
               bleSerial.print(response);
             }
             else {
-              Serial.println(1);
-
               response[3] = 0x31;
               bleSerial.print(response);
             }
             break;
           case securityUnlockCommand: //220XXXXXX
             if (checkValidPass((uint8_t*)&command[commandControlLength])) {
-              Serial.println("unlock once");
-              Serial.println(0);
-              if (commandControl[2]) { //221XXXXXX
-                Serial.println("unlock twice");
-              }
 
+              digitalWrite(shiftRegisterEnablePin, HIGH);
+              shift.writeBit(unlockPin, HIGH);
+              delay(500);
+              shift.writeBit(unlockPin, LOW);
+              delay(1000);
+
+              if (commandControl[2]) { //221XXXXXX
+                shift.writeBit(unlockPin, HIGH);
+                delay(500);
+                shift.writeBit(unlockPin, LOW);
+                delay(1000);
+              }
               response[3] = 0x30;
               bleSerial.print(response);
             }
             else {
-              Serial.println(1);
-
               response[3] = 0x31;
               bleSerial.print(response);
             }
             break;
           case securityAlarmCommand: //230XXXXXX
             if (checkValidPass((uint8_t*)&command[commandControlLength])) {
-              Serial.println("alarm once");
-              Serial.println(0);
+
+              digitalWrite(shiftRegisterEnablePin, HIGH);
+              shift.writeBit(alarmPin, HIGH);
+              delay(500);
+              shift.writeBit(alarmPin, LOW);
+              delay(1000);
 
               response[3] = 0x30;
               bleSerial.print(response);
             }
             else {
-              Serial.println(1);
-
               response[3] = 0x31;
               bleSerial.print(response);
             }
             break;
         }
         break;
+    default:
+      response[3] = 0x32;
+      bleSerial.print(response);
+      break;
+
+      digitalWrite(shiftRegisterEnablePin, LOW);
     }
   }
+}
+
+/*
+ * Put BLE to sleep mode. MLT-BT-5 requires \r and then \n after AT commands. 
+ */
+void send_AT_sleep() {
+  //TODOS require PCB change
+  //TODO: Use STATE pin to determine if BLE module is connected to devices to see if it can take AT commands.
+  //TODO: Use EN pin to break connection to force module to take AT commands. 
+  bleSerial.print("AT+SLEEP\r\n"); 
+}
+
+/*
+ * Setup HM-10 BLE Serial
+ */
+void ble_setup() {
+  //Setup HM-10 BLE serial and put in sleep mode
+  bleSerial.begin(9600);
+  send_AT_sleep();
+
+  //Setup shift register
+  digitalWrite(shiftRegisterEnablePin, LOW);
+  pinMode(shiftRegisterEnablePin, OUTPUT);
+  shift.setBitCount(8);
+  shift.setPins(16, 14, 15); //data,clock,latch
+  shift.batchWriteBegin();
+  //Set all shift register bits to 0
+  for (uint8_t i = 0; i < 8; i++)
+    shift.writeBit(i, LOW);
+  shift.batchWriteEnd();
+
+  //Set interrupt on CD Enable pin to trigger BLE Sleep
+  pinMode(cdEnablePin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(cdEnablePin), send_AT_sleep, CHANGE);
 }
 
 /*
  * Setup remote lock/unlock by BLE.
  */
 void remote_access_setup() {
-
-  Serial.begin(9600);
-
   //Write default passphrase to EEPROM if invalid header
   if (!checkValidEEPROMHeader()) {
-    Serial.println("Invalid eeprom header. Writing header and default passphrase.");
     writePassToEEPROM();
     writeHeaderToEEPROM();
   } else {
     readPassFromEEPROM();
   }
 
-  Serial.print("Current passphrase: ");
-  for (uint8_t i = 0; i < sizeof(passphrase); i++) {
-    Serial.print(passphrase[i]);
-  }
-  Serial.println();
-
-  //ble_setup();
-  bleSerial.begin(9600);
-
-  
-}
-
-void setup() {
-  remote_access_setup();
-}
-
-void loop()
-{
-  checkBLECharacteristic();
+  ble_setup();
 }
