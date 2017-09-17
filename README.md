@@ -10,7 +10,8 @@ Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the 
 
   - Adapted from Dale Thomas's [*Ford Bluetooth Interface*](http://www.instructables.com/id/Ford-Bluetooth-Interface-Control-phone-with-stock-/) and Krysztof Pintscher's  [Ford CD Emulator](http://www.instructables.com/id/Ford-CD-Emulator-Arduino-Mega/).
   - Uses Ford Audio Control Protocol (ACP) to emulate stock 6 CD Changer.
-  - Modified for use with Arduino Uno with **switchPin** set to pin 8.
+  - Adds AUX audio input to vehicle.
+  - Allows stock head unit playback control of iPhone.
   - Protoshield hand wiring diagram included in `Resources` folder. 
   - EAGLE PCB files in `eagle` folder.
 
@@ -27,6 +28,9 @@ Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the 
 ![top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/top.jpg) ![bottom](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/bottom.jpg)
 ![uno protoboard](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/uno-protoboard.png)
 ![side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/side.jpg) ![connected side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/connected-side.jpg)
+
+#### BLE vehicle lock/unlock.
+  - Follow directions above and see [ansonl/ble-control](https://github.com/ansonl/ble-control).
 
 #### ACP Data Logging and LCD Graphing
   - Use **Ford_LCD_datagraph.ino** located in *Sketch/Ford_LCD_datagraph*.
