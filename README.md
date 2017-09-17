@@ -2,6 +2,8 @@
 
 ### *Keep the retro stereo. Bring your own tunes. *
 
+![demo](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/ford_acp_aux_demo_350w.gif)
+
 Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the stock radio to control playback on your iPhone. 
 
 #### [Read about the development of this.](http://ansonliu.com/2017/07/ford-acp-cd-changer-emulator-aux-audio/)
@@ -13,19 +15,28 @@ Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the 
   - EAGLE PCB files in `eagle` folder.
 
 ### Directions
-
-  - Open **Ford_Uno.ino** located in *Sketch/Ford_Uno* and upload to Arduino UNO.
+  - Open **Ford_AUX_BLE_control.ino** located in *Sketch/Ford_AUX_BLE_control* and upload to Arduino UNO.
   - Do one of the following
     1. Wire up Arduino UNO like shown below.
     2. Print PCB using provided EAGLE files.
+  - Place the assembly in your car.
+
+![PCB top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/aux_inline_top.jpg)
+![closing glovebox](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/closing_glovebox.gif)
 
 ![top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/top.jpg) ![bottom](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/bottom.jpg)
 ![uno protoboard](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/uno-protoboard.png)
 ![side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/side.jpg) ![connected side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/connected-side.jpg)
 
+#### ACP Data Logging and LCD Graphing
+  - Use **Ford_LCD_datagraph.ino** located in *Sketch/Ford_LCD_datagraph*.
+
+![acp visualizer](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/data_bar_animated.gif)
+
+
 ### License
 
-Any adaptation of this work must comply with licenses of previous works (those in `Resources` folder) and include references to the previous authors. 
+Any adaptation of this work must comply with licenses of previous works (those in `Resources` folder) and include references to the previous authors. Any work by Anson Liu in this repository is under MIT License.
 
   - Andrew Hammond
   - [Krysztof Pintscher](http://www.instructables.com/id/Ford-CD-Emulator-Arduino-Mega/)
