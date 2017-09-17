@@ -17,10 +17,14 @@ Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) a
 
 ### Directions
   - Open **Ford_AUX_BLE_control.ino** located in *Sketch/Ford_AUX_BLE_control* and upload to Arduino UNO.
+  - Acquire parts on Bill of Materials located in *Resources/LIU_FORD_ACP_AUX_BOM.xlsx*.
   - Do one of the following
     1. Wire up Arduino UNO like shown below.
     2. Print PCB using provided EAGLE files.
   - Place the assembly in your car.
+
+#### BLE vehicle lock/unlock.
+  - Follow directions above and see [ansonl/ble-control](https://github.com/ansonl/ble-control).
 
 ![PCB top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/aux_inline_top.jpg)
 ![closing glovebox](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/closing_glovebox.gif)
@@ -28,9 +32,6 @@ Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) a
 ![top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/top.jpg) ![bottom](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/bottom.jpg)
 ![uno protoboard](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/uno-protoboard.png)
 ![side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/side.jpg) ![connected side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/connected-side.jpg)
-
-#### BLE vehicle lock/unlock.
-  - Follow directions above and see [ansonl/ble-control](https://github.com/ansonl/ble-control).
 
 #### ACP Data Logging and LCD Graphing
   - Use **Ford_LCD_datagraph.ino** located in *Sketch/Ford_LCD_datagraph*.

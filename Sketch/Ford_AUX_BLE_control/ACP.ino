@@ -208,7 +208,7 @@ void acp_process(void) {
         // 03 - Check disc in current slot
         // 04 - Check all discs!
         acp_chksum_send(5);
-        MsTimer2::set(1000, PlayTime); // 500ms period
+        MsTimer2::set(1000, PlayTime); // 1000ms period
         MsTimer2::start();
         /*
         Timer3.initialize(1000000);
