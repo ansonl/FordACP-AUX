@@ -4,9 +4,9 @@
 
 ![demo](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/ford_acp_aux_demo_350w.gif)
 
-Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the stock radio to control playback on your iPhone. 
+Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) and use the stock radio head unit to control playback on your iPhone. 
 
-#### [Read about the development of this.](http://ansonliu.com/2017/07/ford-acp-cd-changer-emulator-aux-audio/)
+## [Read about the development of this.](http://ansonliu.com/2017/09/ford-acp-cd-changer-emulator-aux-audio/)
 
   - Adapted from Dale Thomas's [*Ford Bluetooth Interface*](http://www.instructables.com/id/Ford-Bluetooth-Interface-Control-phone-with-stock-/) and Krysztof Pintscher's  [Ford CD Emulator](http://www.instructables.com/id/Ford-CD-Emulator-Arduino-Mega/).
   - Uses Ford Audio Control Protocol (ACP) to emulate stock 6 CD Changer.
