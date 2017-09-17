@@ -1,6 +1,6 @@
 # Ford CD changer emulator with AUX audio and stock playback control using Arduino UNO
 
-### *Keep the retro stereo. Bring your own tunes. *
+### **Keep the retro stereo. Bring your own tunes.**
 
 ![demo](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/ford_acp_aux_demo_350w.gif)
 
@@ -36,7 +36,9 @@ Add AUX audio input to your older Ford vehicle using an Arduino UNO and use the 
 
 ### License
 
-Any adaptation of this work must comply with licenses of previous works (those in `Resources` folder) and include references to the previous authors. Any work by Anson Liu in this repository is under MIT License.
+Any adaptation of this work must comply with licenses of previous works (those in `Resources` folder) and include references to the previous authors. 
+
+**Any work by Anson Liu in this repository is under MIT License.**
 
   - Andrew Hammond
   - [Krysztof Pintscher](http://www.instructables.com/id/Ford-CD-Emulator-Arduino-Mega/)
