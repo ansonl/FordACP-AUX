@@ -1,23 +1,12 @@
-/*
- * Original code for Yampp -  Andrew Hammond <andyh@mindcode.co.uk>
- *
- * For Arduino Mega 2560 - Krzysztof Pintscher <niou.ns@gmail.com>
- * Full schematics and connection by Krzysztof Pintscher
- * please keep our credits in header :)
- *
- * Integration with AT Commands for OVC3868 - Dale Thomas <dalethomas@me.com>
- *
- ******************************************************************
- * Revisions:
- *
- * 2013-12-17 version 0.9 - public relase
- * 2014-11-30 version 1.0 - Annotations and integration with AT file -DT
- * 2017-05-07 version 1.1 - Removed Bluetooth functionality and editted ports for use with Arduino UNO. -Anson Liu (ansonliu.com)
- *
- */
+//SD data logging
+#include <SPI.h>
+#include <SD.h>
+//#include "libraries/SD/src/SD.h" //Modified SD library with all Serial functions removed. SerialPrint_P() in utility/SdFatUtil.h becomes empty.
+const int chipSelect = 10;
 
-//Ford ACP variables
-#include <MsTimer2.h>
+//Ford ACP
+#include <util/delay.h>
+#include <TimerOne.h>
 typedef unsigned char u08;
 typedef unsigned short u16;
 typedef unsigned long  u32;
@@ -31,7 +20,7 @@ typedef unsigned long  u32;
 #define outp(VAL,ADRESS) ((ADRESS) = (VAL))
 #define inp(VAL) (VAL)
 
-#define ACP_UART_BAUD_RATE  9600
+#define ACP_UART_BAUD_RATE 	9600
 #define ACP_UART_BAUD_SELECT ((u32)((u32)16000000/(ACP_UART_BAUD_RATE*16L)-1))
 #define ACP_LISTEN 0
 #define ACP_SENDACK 1
@@ -54,23 +43,9 @@ u08 acp_mode;
 uint16_t acp_ltimeout;
 boolean rewindState = false;
 boolean ffState = false;
-uint16_t wPlayTime = 0;
+boolean wPlayTime = false;
 uint8_t currentTrack = 1;
 boolean reset_timer = false;
-
-/*
- * ACP communication setup
- */
-void acp_setup() {
-  outp(0xff, PORTD);
-  outp(0xC0, DDRD);
-  
-  pinMode(switchPin, OUTPUT);
-  digitalWrite(switchPin, LOW);
-  delay(500);
-  acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
-  delay(1);
-}
 
 void acp_uart_init(unsigned short baud) {
   cli();
@@ -93,6 +68,27 @@ SIGNAL(USART_RX_vect) {
   acp_rx[acp_rxindex++] = ch;
   if (acp_rxindex > 12) acp_reset();
   else if (eod) {
+
+    File dataFile = SD.open("acp_log.txt", FILE_WRITE);
+      if (dataFile) {
+        int i = 0;
+        for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
+          char buffer[3];
+          int16_t expanded = (int16_t)acp_rx[i];
+          itoa((int16_t)expanded, buffer, 16);
+
+          dataFile.print(buffer);
+          dataFile.print(" ");
+        }
+
+        //print milliseconds since power on
+        String stringOne =  String(millis(), DEC);
+        dataFile.println(stringOne);
+
+        dataFile.close();
+        return;
+      }
+    
     if (acp_checksum == ch) // Valid ACP message - send ack
     {
       acp_status = ACP_SENDACK;
@@ -208,12 +204,8 @@ void acp_process(void) {
         // 03 - Check disc in current slot
         // 04 - Check all discs!
         acp_chksum_send(5);
-        MsTimer2::set(1000, PlayTime); // 1000ms period
-        MsTimer2::start();
-        /*
-        Timer3.initialize(1000000);
-        Timer3.attachInterrupt(PlayTime);
-        */
+        Timer1.initialize(1000000);
+        Timer1.attachInterrupt(PlayTime);
         break;
 
       case 0x42: // [<- Tune]
@@ -317,12 +309,12 @@ void acp_process(void) {
           case false:
             ffState = true;
             // Start Fast Forward
-            lastCommand = fastForwardTrack;
+            //lastCommand = fastForwardTrack;
             break;
           case true:
             ffState = false;
             // Stop Fast Forward / Rewind
-            lastCommand = cancelCommand;
+            //lastCommand = cancelCommand;
             break;
           }
           break;
@@ -331,21 +323,21 @@ void acp_process(void) {
           case false:
             rewindState = true;
             // Start Rewind
-            lastCommand = rewindTrack;
+            //lastCommand = rewindTrack;
             break;
           case true:
             rewindState = false;
             // Stop Fast Forward / Rewind
-            lastCommand = cancelCommand;
+            //lastCommand = cancelCommand;
             break;
           }
           break;
         case 0x50: // Shuffle Button
-          lastCommand = activateSiri;
+          //lastCommand = activateSiri;
           break;
         case 0x60: // Comp Button
           // Play/Pause Music
-          lastCommand = playPause;
+          //lastCommand = playPause;
           break;
         }
 
@@ -359,7 +351,7 @@ void acp_process(void) {
         acp_tx[4] = BCD(currentTrack);
         acp_chksum_send(5);
 
-        lastCommand = nextTrack;
+        //lastCommand = nextTrack;
         break;
 
       case 0x43:
@@ -367,7 +359,7 @@ void acp_process(void) {
         acp_tx[4] = BCD(currentTrack);
         acp_chksum_send(5);
 
-        lastCommand = prevTrack;
+        //lastCommand = prevTrack;
         break;
 
       default:
@@ -385,3 +377,74 @@ void acp_chksum_send(unsigned char buffercount) {
   acp_tx[acp_txsize] = checksum;
   acp_sendmsg();
 }
+
+void PlayTime(){
+  wPlayTime++;
+  acp_displaytime();
+}
+
+void acp_displaytime()
+{
+  if(reset_timer == true){
+    wPlayTime = 0;
+    reset_timer = false; 
+  }
+  acp_tx[0] = 0x71 ;    
+  acp_tx[1] = 0x9b ;
+  acp_tx[2] = 0x82 ;
+  acp_tx[3] = 0xd0 ;
+  acp_tx[4] = BCD(1);
+  acp_tx[5] = BCD(currentTrack) ; //Track
+  acp_tx[6] = BCD(wPlayTime/60); 
+  acp_tx[7] = _BV(7) | BCD (wPlayTime % 60); 
+  acp_chksum_send(8);
+}
+
+uint8_t BCD(unsigned char val)
+{
+  return ((val/10)*16) + (val % 10) ;
+}
+
+void acp_nodisc(void)
+{
+  acp_tx[0] = 0x71 ;    
+  acp_tx[1] = 0x9b ;
+  acp_tx[2] = 0x82 ;
+  acp_tx[3] = 0xff ;
+  acp_tx[4] = 0x01 ;
+  acp_chksum_send(5);
+}
+
+void change_track(boolean next)
+{
+  if(next != true){
+    if(currentTrack == 1) {
+    } 
+    else {
+     currentTrack--;
+    }
+  }
+  else {
+    currentTrack++;
+  }
+  reset_timer = true;
+}
+
+
+void setup(){
+  outp(0xff, PORTD);
+  outp(0xC0, DDRD);
+  pinMode(switchPin, OUTPUT);
+  digitalWrite(switchPin, LOW);
+  delay(500);
+  acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
+  delay(1);
+
+
+  SD.begin(chipSelect);
+}
+
+void loop() {
+  acp_handler();
+}
+
