@@ -54,7 +54,7 @@ u08 acp_mode;
 uint16_t acp_ltimeout;
 boolean rewindState = false;
 boolean ffState = false;
-uint16_t wPlayTime = 0;
+uint8_t wPlayTime = 0;
 uint8_t currentTrack = 1;
 boolean reset_timer = false;
 
