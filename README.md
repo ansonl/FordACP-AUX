@@ -31,6 +31,8 @@ Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) a
 
 ![top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/top.jpg) ![bottom](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/bottom.jpg)
 ![uno protoboard](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/uno-protoboard.png)
+*Please note that pin 8 in the above diagram has been changed to pin 7 in the latest Ford_AUX_BLE code. 
+
 ![side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/side.jpg) ![connected side](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/connected-side.jpg)
 
 #### ACP Data Logging and LCD Graphing
