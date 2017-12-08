@@ -42,6 +42,12 @@ Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) a
 ![acp visualizer](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/data_bar_animated.gif)
 
 
+### Contributing
+
+Please report issues and submit pull requests as needed. Please make an issue for soldering or build issues, too. 
+
+I have resolved several people's build issues by email and someone may find your issue helpful!
+
 ### License
 
 Any adaptation of this work must comply with licenses of previous works (those in `Resources` folder) and include references to the previous authors. 
