@@ -16,6 +16,65 @@
  *
  */
 
+//Ford ACP variables
+#include <MsTimer2.h>
+typedef unsigned char u08;
+typedef unsigned short u16;
+typedef unsigned long  u32;
+
+#ifndef cbi // "clear bit"
+ #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi // "set bit"
+ #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+#define outp(VAL,ADRESS) ((ADRESS) = (VAL))
+#define inp(VAL) (VAL)
+
+#define ACP_UART_BAUD_RATE  9600
+#define ACP_UART_BAUD_SELECT ((u32)((u32)16000000/(ACP_UART_BAUD_RATE*16L)-1))
+#define ACP_LISTEN 0
+#define ACP_SENDACK 1
+#define ACP_MSGREADY 2
+#define ACP_WAITACK 3
+#define ACP_SENDING 4
+
+const uint8_t switchPin = 7; // Pin 7 connected to pins 2 & 3 (RE/DE) on MAX485
+
+uint8_t acp_rx[12];
+uint8_t acp_tx[12];
+uint8_t acp_rxindex;
+uint8_t acp_txindex;
+u08 acp_status;
+u08 acp_txsize;
+u08 acp_timeout;
+u08 acp_checksum;
+u08 acp_retries;
+u08 acp_mode;
+uint16_t acp_ltimeout;
+boolean rewindState = false;
+boolean ffState = false;
+uint8_t wPlayTime = 0;
+uint8_t currentTrack = 1;
+boolean reset_timer = false;
+
+/*
+ * ACP communication setup
+ */
+void acp_setup() {
+  outp(0xff, PORTD);
+  outp(0xC0, DDRD);
+  
+  pinMode(switchPin, OUTPUT);
+  digitalWrite(switchPin, LOW);
+  delay(500);
+  acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
+  delay(1);
+
+  MsTimer2::set(1000, PlayTime); // 1000ms period
+  MsTimer2::start();
+}
+
 void acp_uart_init(unsigned short baud) {
   cli();
   outp((u08)(baud >> 8), UBRR0H);
@@ -37,44 +96,6 @@ SIGNAL(USART_RX_vect) {
   acp_rx[acp_rxindex++] = ch;
   if (acp_rxindex > 12) acp_reset();
   else if (eod) {
-
-    File dataFile = SD.open("acp_log.txt", FILE_WRITE);
-      if (dataFile) {
-        //lcd.home();
-        int i = 0;
-        for (i = 0; i < sizeof(acp_rx)/sizeof(uint8_t); i++) {
-          char buffer[3];
-          int16_t expanded = (int16_t)acp_rx[i];
-          itoa((int16_t)expanded, buffer, 16);
-
-          dataFile.print(buffer);
-          dataFile.print(" ");
-
-          //lcd.setCursor(i*2, 0);
-          //lcd.write(buffer);
-        }
-
-        dataFile.print(" ");
-
-        //Accelerometer logging m/s^2
-        sensors_event_t event; 
-        mma.getEvent(&event);
-        dataFile.print(event.acceleration.x);
-        dataFile.print(" ");
-        dataFile.print(event.acceleration.y);
-        dataFile.print(" ");
-        dataFile.print(event.acceleration.z);
-        dataFile.print("");
-
-        String stringOne =  String(millis(), DEC);
-        dataFile.println(stringOne);
-
-        dataFile.close();
-      } else {
-        //lcd.home();
-        //lcd.write("error opening acp_log.txt");
-      }
-    
     if (acp_checksum == ch) // Valid ACP message - send ack
     {
       acp_status = ACP_SENDACK;
@@ -87,8 +108,8 @@ SIGNAL(USART_RX_vect) {
 }
 
 void acp_txenable(boolean enable) {
-  if (enable) PORTH |= (1 << PH4); //sets a high state on pin PD7
-  else PORTH &= ~(1 << PH4); //sets the low state on pin PD7
+  if (enable) PORTD |= (1 << PD7); //sets a high state on pin PD7
+  else PORTD &= ~(1 << PD7); //sets the low state on pin PD7
   asm volatile("nop");
 }
 
@@ -190,8 +211,6 @@ void acp_process(void) {
         // 03 - Check disc in current slot
         // 04 - Check all discs!
         acp_chksum_send(5);
-        Timer1.initialize(1000000);
-        Timer1.attachInterrupt(PlayTime);
         break;
 
       case 0x42: // [<- Tune]

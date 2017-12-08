@@ -70,6 +70,9 @@ void acp_setup() {
   delay(500);
   acp_uart_init(ACP_UART_BAUD_SELECT); // Initialize the ACP USART
   delay(1);
+
+  MsTimer2::set(1000, PlayTime); // 1000ms period
+  MsTimer2::start();
 }
 
 void acp_uart_init(unsigned short baud) {
@@ -208,12 +211,6 @@ void acp_process(void) {
         // 03 - Check disc in current slot
         // 04 - Check all discs!
         acp_chksum_send(5);
-        MsTimer2::set(1000, PlayTime); // 1000ms period
-        MsTimer2::start();
-        /*
-        Timer3.initialize(1000000);
-        Timer3.attachInterrupt(PlayTime);
-        */
         break;
 
       case 0x42: // [<- Tune]

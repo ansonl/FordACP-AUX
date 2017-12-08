@@ -46,6 +46,7 @@ char passphrase[] = { //121212
 bool lockout;
 unsigned long lockoutMillis;
 
+char atSleep[] = "AT+SLEEP\r\n";
 
 //Shift register setup
 Shifty shift;
@@ -272,7 +273,20 @@ void send_AT_sleep() {
   //TODOS require PCB change
   //TODO: Use STATE pin to determine if BLE module is connected to devices to see if it can take AT commands.
   //TODO: Use EN pin to break connection to force module to take AT commands. 
-  bleSerial.print("AT+SLEEP\r\n"); 
+  bleSerial.print(atSleep); 
+}
+
+void headunitOnInterrupt() {
+  send_AT_sleep();
+
+  //start and stop timer
+  switch(digitalRead(cdEnablePin)) {
+    case true:
+      MsTimer2::start();
+      break;
+    case false:
+      MsTimer2::stop();
+  }
 }
 
 /*
@@ -296,7 +310,7 @@ void ble_setup() {
 
   //Set interrupt on CD Enable pin to trigger BLE Sleep
   pinMode(cdEnablePin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(cdEnablePin), send_AT_sleep, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(cdEnablePin), headunitOnInterrupt, CHANGE);
 }
 
 /*
