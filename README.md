@@ -16,15 +16,16 @@ Add AUX audio input to your older Ford vehicle using a Atmega328 (Arduino UNO) a
   - EAGLE PCB files in `eagle` folder.
 
 ### Directions
-  - Open **Ford_AUX_BLE_control.ino** located in *Sketch/Ford_AUX_BLE_control* and upload to Arduino UNO.
+  - Open **Ford_ACP_AUX.ino** located in *Sketch/Ford_ACP_AUX* and upload to Arduino UNO.
   - Acquire parts on Bill of Materials located in *Resources/LIU_FORD_ACP_AUX_BOM.xlsx*.
   - Do one of the following
-    1. Wire up Arduino UNO like shown below.
+    1. Wire up Arduino UNO like shown below. *Note: Updated pin 8 → pin 7 in latest code.*
     2. Print PCB using provided EAGLE files.
   - Place the assembly in your car.
 
 #### BLE vehicle lock/unlock.
-  - Follow directions above and see [ansonl/ble-control](https://github.com/ansonl/ble-control).
+  - Follow directions above but use **Ford_AUX_BLE_control.ino** located in *Sketch/Ford_AUX_BLE_control* and upload to Arduino UNO.
+  - Build and install [ansonl/ble-control](https://github.com/ansonl/ble-control) on your iOS device.
 
 ![PCB top](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/aux_inline_top.jpg)
 ![closing glovebox](https://raw.githubusercontent.com/ansonl/fordacp-aux/master/Resources/closing_glovebox.gif)

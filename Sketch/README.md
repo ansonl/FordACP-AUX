@@ -1,3 +1,7 @@
+# See below for description of each Sketch.
+
+####  Please note the updated pin assignments in the code before soldering.
+
 Sketch directory | Description
 --- | ---
 EEPROM_test | Tests writing and reading constants in EEPROM.
